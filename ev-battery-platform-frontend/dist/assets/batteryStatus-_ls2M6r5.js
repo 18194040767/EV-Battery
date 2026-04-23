@@ -1,0 +1,1 @@
+const n=r=>r==null||r===""?"":String(r),o=r=>(Array.isArray(r)?r:[]).map(t=>n(t)).filter(Boolean),S={PENDING_ASSESSMENT:"待评估",ASSESSED:"已评估",TRADED:"已交易",OFFLINE:"已下架",DRAFT:"草稿"},s=r=>S[r]||r||"-";export{o as a,s as f,n};

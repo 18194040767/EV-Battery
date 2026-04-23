@@ -1,0 +1,13 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::               (v2.7.18)
+
+2026-04-09 21:52:25.474  INFO 31792 --- [           main] c.e.EvBatteryPlatformApplication         : Starting EvBatteryPlatformApplication v1.0.0-SNAPSHOT using Java 22.0.1 on HBJ with PID 31792 (D:\HuaweiMoveData\Users\hbj\Desktop\EV-Battery\ev-battery-platform-backend\target\ev-battery-platform-backend-1.0.0-SNAPSHOT.jar started by hbj in D:\HuaweiMoveData\Users\hbj\Desktop\EV-Battery\ev-battery-platform-backend)
+2026-04-09 21:52:25.477  INFO 31792 --- [           main] c.e.EvBatteryPlatformApplication         : The following 1 profile is active: "dev"
+2026-04-09 21:52:25.478 DEBUG 31792 --- [           main] o.s.boot.SpringApplication               : Loading source class com.evbattery.EvBatteryPlatformApplication
+2026-04-09 21:52:25.544 DEBUG 31792 --- [           main] ConfigServletWebServerApplicationContext : Refreshing org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@50b472aa

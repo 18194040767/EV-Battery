@@ -1,0 +1,12 @@
+{
+  "dataset_files": [
+    "D:\\HuaweiMoveData\\Users\\hbj\\Desktop\\EV-Battery\\dataset\\ev_battery_degradation_v1.csv",
+    "D:\\HuaweiMoveData\\Users\\hbj\\Desktop\\EV-Battery\\dataset\\ev_battery_health_data.csv",
+    "D:\\HuaweiMoveData\\Users\\hbj\\Desktop\\EV-Battery\\dataset\\ev_battery_synth.csv"
+  ],
+  "row_count": 35000,
+  "r2": 0.9994,
+  "rmse": 0.3477,
+  "model_path": "D:\\HuaweiMoveData\\Users\\hbj\\Desktop\\EV-Battery\\ml\\soh_model.pkl",
+  "scaler_path": "D:\\HuaweiMoveData\\Users\\hbj\\Desktop\\EV-Battery\\ml\\scaler.pkl"
+}

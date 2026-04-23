@@ -1,0 +1,7 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------< com.evbattery:ev-battery-platform-backend >--------------
+[INFO] Building ev-battery-platform-backend 1.0.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot-maven-plugin:2.7.18:run (default-cli) > test-compile @ ev-battery-platform-backend >>>

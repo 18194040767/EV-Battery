@@ -1,0 +1,63 @@
+# EV电池平台API测试脚本
+# 使用VS Code REST Client插件或curl命令测试
+
+### 1. 用户登录测试
+POST http://localhost:8081/api/user/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "123456"
+}
+
+### 2. 用户注册测试
+POST http://localhost:8081/api/user/register
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "password": "123456",
+  "email": "newuser@ev.com",
+  "realName": "新用户"
+}
+
+### 3. 获取当前用户信息（需要先登录获取token）
+GET http://localhost:8081/api/user/current
+Authorization: Bearer {{token}}
+
+### 4. 修改密码
+POST http://localhost:8081/api/user/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "oldPassword": "123456",
+  "newPassword": "newpassword123"
+}
+
+### 5. 测试用户登录
+POST http://localhost:8081/api/user/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "123456"
+}
+
+### 6. 采购用户登录
+POST http://localhost:8081/api/user/login
+Content-Type: application/json
+
+{
+  "username": "buyer01",
+  "password": "123456"
+}
+
+### 7. 销售用户登录
+POST http://localhost:8081/api/user/login
+Content-Type: application/json
+
+{
+  "username": "seller01",
+  "password": "123456"
+}

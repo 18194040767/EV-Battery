@@ -1,0 +1,367 @@
+CREATE TABLE IF NOT EXISTS user (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  real_name VARCHAR(100),
+  phone VARCHAR(20),
+  email VARCHAR(100),
+  status TINYINT NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_code VARCHAR(50) NOT NULL UNIQUE,
+  role_name VARCHAR(100) NOT NULL,
+  description VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  perm_code VARCHAR(100) NOT NULL UNIQUE,
+  perm_name VARCHAR(100) NOT NULL,
+  perm_type VARCHAR(20) DEFAULT 'API',
+  path VARCHAR(200),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_role (user_id, role_id),
+  CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES user(id),
+  CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES role(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS role_permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_id BIGINT NOT NULL,
+  permission_id BIGINT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_role_perm (role_id, permission_id),
+  CONSTRAINT fk_rp_role FOREIGN KEY (role_id) REFERENCES role(id),
+  CONSTRAINT fk_rp_permission FOREIGN KEY (permission_id) REFERENCES permission(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS battery_record (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  battery_code VARCHAR(64) NOT NULL UNIQUE,
+  source_type VARCHAR(30) NOT NULL,
+  bms_raw_file_path VARCHAR(255),
+  feature_json JSON,
+  audit_status TINYINT DEFAULT 0,
+  status VARCHAR(30) DEFAULT 'PENDING_ASSESSMENT',
+  remark VARCHAR(255),
+  is_deleted BOOLEAN DEFAULT FALSE,
+  created_by BIGINT,
+  voltage DECIMAL(6,2),
+  capacity_retention_rate DECIMAL(5,2),
+  internal_resistance_ratio DECIMAL(5,2),
+  cycle_count INT,
+  avg_temperature DECIMAL(5,2),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_battery_status (status),
+  KEY idx_battery_source (source_type),
+  KEY idx_battery_deleted (is_deleted),
+  CONSTRAINT fk_battery_creator FOREIGN KEY (created_by) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS battery_draft (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  title VARCHAR(100),
+  draft_data JSON NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_battery_draft_user FOREIGN KEY (user_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tag (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(30) NOT NULL UNIQUE,
+  color VARCHAR(7) DEFAULT '#409EFF',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS battery_tag_relation (
+  battery_id BIGINT NOT NULL,
+  tag_id BIGINT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (battery_id, tag_id),
+  CONSTRAINT fk_battery_tag_battery FOREIGN KEY (battery_id) REFERENCES battery_record(id),
+  CONSTRAINT fk_battery_tag_tag FOREIGN KEY (tag_id) REFERENCES tag(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS battery_upload_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  battery_record_id BIGINT,
+  file_name VARCHAR(255),
+  upload_status TINYINT DEFAULT 1,
+  message VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_bul_battery FOREIGN KEY (battery_record_id) REFERENCES battery_record(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS health_assessment (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  battery_id BIGINT NOT NULL,
+  health_score INT,
+  health_level VARCHAR(20),
+  rule_score INT,
+  ml_score INT,
+  suggested_scene VARCHAR(100),
+  trend_data JSON,
+  llm_summary TEXT,
+  assessment_time DATETIME,
+  is_ml_enhanced BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_assessment_battery FOREIGN KEY (battery_id) REFERENCES battery_record(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  seller_id BIGINT NOT NULL,
+  battery_id BIGINT NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  description TEXT,
+  price DECIMAL(12,2) NOT NULL,
+  original_price DECIMAL(12,2),
+  stock INT DEFAULT 1,
+  cover_image VARCHAR(255),
+  image_urls JSON,
+  shipping_from VARCHAR(100),
+  shipping_type VARCHAR(30),
+  battery_type VARCHAR(50),
+  health_level VARCHAR(30),
+  is_free_shipping BOOLEAN DEFAULT TRUE,
+  sale_count INT DEFAULT 0,
+  view_count INT DEFAULT 0,
+  favorite_count INT DEFAULT 0,
+  publish_status VARCHAR(30) DEFAULT 'PENDING_REVIEW',
+  audit_status VARCHAR(30) DEFAULT 'APPROVED',
+  draft_flag BOOLEAN DEFAULT FALSE,
+  deleted_flag BOOLEAN DEFAULT FALSE,
+  status TINYINT DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_product_seller FOREIGN KEY (seller_id) REFERENCES user(id),
+  CONSTRAINT fk_product_battery FOREIGN KEY (battery_id) REFERENCES battery_record(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product_draft (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  seller_id BIGINT NOT NULL,
+  title VARCHAR(150),
+  draft_data JSON NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_product_draft_user FOREIGN KEY (seller_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_profile (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL UNIQUE,
+  nickname VARCHAR(100),
+  avatar VARCHAR(255),
+  bio VARCHAR(255),
+  city VARCHAR(100),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_profile_user FOREIGN KEY (user_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_address (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  receiver_name VARCHAR(100) NOT NULL,
+  receiver_phone VARCHAR(30) NOT NULL,
+  province VARCHAR(50),
+  city VARCHAR(50),
+  district VARCHAR(50),
+  detail_address VARCHAR(255),
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_address_user FOREIGN KEY (user_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS favorite_product (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_favorite_user_product (user_id, product_id),
+  CONSTRAINT fk_favorite_user FOREIGN KEY (user_id) REFERENCES user(id),
+  CONSTRAINT fk_favorite_product FOREIGN KEY (product_id) REFERENCES product(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS cart_item (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  quantity INT DEFAULT 1,
+  checked_flag BOOLEAN DEFAULT TRUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_cart_user_product (user_id, product_id),
+  CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES user(id),
+  CONSTRAINT fk_cart_product FOREIGN KEY (product_id) REFERENCES product(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS purchase_demand (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  buyer_id BIGINT NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  requirement TEXT,
+  budget_min DECIMAL(12,2),
+  budget_max DECIMAL(12,2),
+  status TINYINT DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_demand_buyer FOREIGN KEY (buyer_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `order` (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_no VARCHAR(64) NOT NULL UNIQUE,
+  product_id BIGINT NOT NULL,
+  buyer_id BIGINT NOT NULL,
+  seller_id BIGINT NOT NULL,
+  quantity INT DEFAULT 1,
+  amount DECIMAL(12,2) NOT NULL,
+  unit_price DECIMAL(12,2),
+  address_snapshot JSON,
+  product_snapshot JSON,
+  order_status VARCHAR(30) DEFAULT 'CREATED',
+  pay_status VARCHAR(30) DEFAULT 'UNPAID',
+  payment_method VARCHAR(30),
+  buyer_deleted BOOLEAN DEFAULT FALSE,
+  seller_deleted BOOLEAN DEFAULT FALSE,
+  pay_time DATETIME,
+  ship_time DATETIME,
+  receive_time DATETIME,
+  complete_time DATETIME,
+  cancel_time DATETIME,
+  refund_time DATETIME,
+  logistics_company VARCHAR(100),
+  logistics_no VARCHAR(100),
+  remark VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_order_product FOREIGN KEY (product_id) REFERENCES product(id),
+  CONSTRAINT fk_order_buyer FOREIGN KEY (buyer_id) REFERENCES user(id),
+  CONSTRAINT fk_order_seller FOREIGN KEY (seller_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product_review (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL UNIQUE,
+  reviewer_id BIGINT NOT NULL,
+  seller_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  score INT NOT NULL,
+  content VARCHAR(500),
+  image_urls JSON,
+  reply_content VARCHAR(500),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_review_order FOREIGN KEY (order_id) REFERENCES `order`(id),
+  CONSTRAINT fk_review_user FOREIGN KEY (reviewer_id) REFERENCES user(id),
+  CONSTRAINT fk_review_seller FOREIGN KEY (seller_id) REFERENCES user(id),
+  CONSTRAINT fk_review_product FOREIGN KEY (product_id) REFERENCES product(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS trade_message (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  session_id VARCHAR(120) NOT NULL,
+  product_id BIGINT NOT NULL,
+  sender_id BIGINT NOT NULL,
+  receiver_id BIGINT NOT NULL,
+  message_type VARCHAR(20) DEFAULT 'TEXT',
+  content VARCHAR(1000),
+  read_flag BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_message_product FOREIGN KEY (product_id) REFERENCES product(id),
+  CONSTRAINT fk_message_sender FOREIGN KEY (sender_id) REFERENCES user(id),
+  CONSTRAINT fk_message_receiver FOREIGN KEY (receiver_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS contract (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  contract_no VARCHAR(64),
+  order_id BIGINT NOT NULL,
+  pdf_path VARCHAR(255),
+  hash_digest VARCHAR(128),
+  content_hash VARCHAR(128),
+  pdf_hash VARCHAR(128),
+  verify_count INT DEFAULT 0,
+  notarization_tx_id VARCHAR(128),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_contract_order FOREIGN KEY (order_id) REFERENCES `order`(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS logistics_info (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  company VARCHAR(100),
+  tracking_no VARCHAR(100),
+  status VARCHAR(50),
+  nodes_json JSON,
+  hazardous_notice TEXT,
+  notice_pdf_path VARCHAR(255),
+  contact_name VARCHAR(100),
+  contact_phone VARCHAR(30),
+  last_updated_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_logistics_order FOREIGN KEY (order_id) REFERENCES `order`(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS credit_score (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL UNIQUE,
+  score INT DEFAULT 100,
+  level VARCHAR(20) DEFAULT 'A',
+  updated_reason VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_credit_user FOREIGN KEY (user_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS report (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  related_type VARCHAR(20) NOT NULL,
+  related_id BIGINT NOT NULL,
+  version_no VARCHAR(50),
+  content LONGTEXT,
+  summary VARCHAR(500),
+  created_by BIGINT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_report_user FOREIGN KEY (created_by) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS app_message (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  title VARCHAR(120) NOT NULL,
+  content VARCHAR(1000),
+  message_type VARCHAR(30) DEFAULT 'ASSESSMENT',
+  read_flag BOOLEAN DEFAULT FALSE,
+  related_type VARCHAR(30),
+  related_id BIGINT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_app_message_user FOREIGN KEY (user_id) REFERENCES user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
