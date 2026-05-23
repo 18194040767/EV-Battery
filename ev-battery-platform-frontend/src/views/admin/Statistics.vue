@@ -53,7 +53,7 @@ onMounted(async () => {
 .province-grid article {
   padding: 18px;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(15, 118, 110, 0.22));
+  background: #ffffff;
   border: 1px solid rgba(14, 165, 233, 0.18);
 }
 

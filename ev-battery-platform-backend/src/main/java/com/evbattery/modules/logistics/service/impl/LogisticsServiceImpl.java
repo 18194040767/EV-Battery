@@ -67,7 +67,7 @@ public class LogisticsServiceImpl implements LogisticsService {
         logisticsInfo.setTrackingNo(StringUtils.hasText(trackingNo) ? trackingNo : ("MOCK" + System.currentTimeMillis()));
         logisticsInfo.setContactName(StringUtils.hasText(contactName) ? contactName : "平台应急联系人");
         logisticsInfo.setContactPhone(StringUtils.hasText(contactPhone) ? contactPhone : "400-800-1234");
-        logisticsInfo.setHazardousNotice("锂电池运输请避免高温、挤压、短路与剧烈冲击。");
+        logisticsInfo.setHazardousNotice("本单涉及锂电池类货物，运输中应防短路、防挤压、防高温暴晒，并按危险品运输要求留存应急联系人。");
         logisticsInfo.setLastUpdatedAt(LocalDateTime.now());
 
         Map<String, Object> track = buildTracking(orderId, logisticsInfo.getCompany(), logisticsInfo.getTrackingNo(), logisticsInfo.getLastUpdatedAt());
@@ -146,23 +146,22 @@ public class LogisticsServiceImpl implements LogisticsService {
     }
 
     private void ensureNoticePdf(LogisticsInfo logisticsInfo, Order order) {
-        if (StringUtils.hasText(logisticsInfo.getNoticePdfPath()) && new File(logisticsInfo.getNoticePdfPath()).exists()) {
-            return;
-        }
         Map<String, Object> product = jdbcTemplate.queryForMap(
                 "select p.title, p.battery_type as batteryType from product p where p.id=?",
                 order.getProductId()
         );
         List<String> lines = new ArrayList<String>();
-        lines.add("Order No: " + order.getOrderNo());
-        lines.add("Battery Type: " + product.get("batteryType"));
-        lines.add("Product: " + product.get("title"));
-        lines.add("Precautions:");
-        lines.add("1. Prevent short circuit.");
-        lines.add("2. Prevent squeeze and impact.");
-        lines.add("3. Avoid high temperature exposure.");
-        lines.add("Emergency Contact: " + logisticsInfo.getContactName() + " / " + logisticsInfo.getContactPhone());
-        byte[] pdfBytes = PdfGenerator.generateSimpleDocument("Hazardous Transportation Notice", lines);
+        lines.add("订单编号：" + order.getOrderNo());
+        lines.add("物流公司：" + logisticsInfo.getCompany());
+        lines.add("运单号：" + logisticsInfo.getTrackingNo());
+        lines.add("商品名称：" + product.get("title"));
+        lines.add("电池类型：" + product.get("batteryType"));
+        lines.add("托运提示：本货物为动力电池相关商品，包装、装卸、仓储与运输过程应满足锂电池货物安全运输要求。");
+        lines.add("安全要求：1. 禁止与易燃、强氧化、强腐蚀物品混装；2. 防止正负极短路；3. 防止挤压、穿刺、跌落和剧烈冲击；4. 避免高温暴晒、雨淋和长时间靠近热源。");
+        lines.add("应急处置：发现鼓包、泄漏、冒烟、异味或异常升温时，应立即隔离货物，远离火源，通知承运方和平台应急联系人处理。");
+        lines.add("应急联系人：" + logisticsInfo.getContactName() + " / " + logisticsInfo.getContactPhone());
+        lines.add("生成时间：" + LocalDateTime.now());
+        byte[] pdfBytes = PdfGenerator.generateSimpleDocument("危险品运输告知单", lines);
         File pdfFile = Paths.get(storageRoot, "logistics", "notice-" + order.getId() + ".pdf").toFile();
         PdfGenerator.writeToFile(pdfFile, pdfBytes);
         logisticsInfo.setNoticePdfPath(pdfFile.getAbsolutePath());

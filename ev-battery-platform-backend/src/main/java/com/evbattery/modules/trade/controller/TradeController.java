@@ -14,6 +14,8 @@ import com.evbattery.modules.trade.mapper.ProductMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -380,20 +382,37 @@ public class TradeController {
     }
 
     @PostMapping("/orders/{id}/pay")
+    @Transactional
     public Result<String> pay(@PathVariable Long id) {
         Order order = orderMapper.selectById(id);
         if (order == null || !currentUserId().equals(order.getBuyerId())) return Result.fail(404, "订单不存在");
         if ("PAID".equals(order.getPayStatus())) return Result.success("支付成功", null);
+        int claimed = jdbcTemplate.update(
+                "update `order` set pay_status = 'PAYING' where id = ? and buyer_id = ? and pay_status = 'UNPAID'",
+                id, currentUserId()
+        );
+        if (claimed == 0) {
+            Order freshOrder = orderMapper.selectById(id);
+            if (freshOrder != null && "PAID".equals(freshOrder.getPayStatus())) return Result.success("支付成功", null);
+            return Result.fail(409, "订单状态已变化，请刷新后重试");
+        }
         Product product = productMapper.selectById(order.getProductId());
-        if (product.getStock() < order.getQuantity()) return Result.fail(400, "库存不足");
+        if (product == null || !"ON_SHELF".equals(product.getPublishStatus())) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return Result.fail(400, "商品当前不可支付");
+        }
+        int updatedStock = jdbcTemplate.update(
+                "update product set stock = stock - ?, sale_count = ifnull(sale_count, 0) + ?, publish_status = case when stock - ? <= 0 then 'SOLD_OUT' else publish_status end where id = ? and deleted_flag = 0 and publish_status = 'ON_SHELF' and stock >= ?",
+                order.getQuantity(), order.getQuantity(), order.getQuantity(), order.getProductId(), order.getQuantity()
+        );
+        if (updatedStock == 0) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return Result.fail(409, "库存已变化，请刷新后重试");
+        }
         order.setPayStatus("PAID");
         order.setOrderStatus("PAID_PENDING_SHIP");
         order.setPayTime(LocalDateTime.now());
         orderMapper.updateById(order);
-        product.setStock(product.getStock() - order.getQuantity());
-        product.setSaleCount((product.getSaleCount() == null ? 0 : product.getSaleCount()) + order.getQuantity());
-        if (product.getStock() <= 0) product.setPublishStatus("SOLD_OUT");
-        productMapper.updateById(product);
         return Result.success("支付成功", null);
     }
 

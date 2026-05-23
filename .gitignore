@@ -1,0 +1,17 @@
+*.log
+*.err.log
+*.out.log
+hs_err_pid*.log
+replay_pid*.log
+
+.codex-logs/
+.idea/
+.vite/
+outputs/
+
+ev-battery-platform-backend/target/
+ev-battery-platform-backend/storage/
+
+ev-battery-platform-frontend/dist/
+ev-battery-platform-frontend/node_modules/
+ev-battery-platform-frontend/vite-dev.*.log

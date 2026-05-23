@@ -6,11 +6,11 @@ import java.util.Map;
 public interface StatisticsService {
     Map<String, Object> tradeTrend(Integer days);
 
-    List<Map<String, Object>> healthDistribution();
+    List<Map<String, Object>> healthDistribution(Integer days);
 
     List<Map<String, Object>> sourceDistribution();
 
-    List<Map<String, Object>> productCategoryDistribution();
+    List<Map<String, Object>> productCategoryDistribution(Integer days);
 
     Map<String, Object> adminOverview();
 }

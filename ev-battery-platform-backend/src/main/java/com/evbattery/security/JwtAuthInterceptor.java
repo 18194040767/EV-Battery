@@ -18,8 +18,11 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String uri = request.getRequestURI();
         if (uri.startsWith("/api/user/login") || uri.startsWith("/api/user/register")
+                || uri.startsWith("/api/user/forgot-password/")
                 || uri.startsWith("/api/assistant/")
-                || uri.startsWith("/doc.html") || uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger")) {
+                || uri.startsWith("/doc.html")
+                || uri.startsWith("/v2/api-docs") || uri.startsWith("/v3/api-docs")
+                || uri.startsWith("/swagger") || uri.startsWith("/webjars/")) {
             return true;
         }
         String auth = request.getHeader("Authorization");

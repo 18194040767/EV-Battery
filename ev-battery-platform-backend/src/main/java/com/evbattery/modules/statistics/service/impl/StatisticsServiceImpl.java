@@ -47,7 +47,14 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public List<Map<String, Object>> healthDistribution() {
+    public List<Map<String, Object>> healthDistribution(Integer days) {
+        int length = normalizeDays(days, 0);
+        if (length > 0) {
+            return jdbcTemplate.queryForList(
+                    "select ifnull(health_level, 'UNKNOWN') as name, count(1) as value from health_assessment where ifnull(assessment_time, created_at) >= date_sub(now(), interval ? day) group by health_level order by value desc",
+                    length
+            );
+        }
         return jdbcTemplate.queryForList("select ifnull(health_level, 'UNKNOWN') as name, count(1) as value from health_assessment group by health_level order by value desc");
     }
 
@@ -57,8 +64,18 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public List<Map<String, Object>> productCategoryDistribution() {
-        return jdbcTemplate.queryForList("select ifnull(battery_type, 'UNKNOWN') as name, count(1) as value from product where deleted_flag = 0 group by battery_type order by value desc");
+    public List<Map<String, Object>> productCategoryDistribution(Integer days) {
+        int length = normalizeDays(days, 0);
+        if (length > 0) {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                    "select ifnull(nullif(trim(battery_type), ''), 'UNKNOWN') as name, count(1) as value from product where deleted_flag = 0 and created_at >= date_sub(now(), interval ? day) group by ifnull(nullif(trim(battery_type), ''), 'UNKNOWN') order by value desc",
+                    length
+            );
+            if (!rows.isEmpty()) {
+                return rows;
+            }
+        }
+        return jdbcTemplate.queryForList("select ifnull(nullif(trim(battery_type), ''), 'UNKNOWN') as name, count(1) as value from product where deleted_flag = 0 group by ifnull(nullif(trim(battery_type), ''), 'UNKNOWN') order by value desc");
     }
 
     @Override
@@ -76,8 +93,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         data.put("metrics", metrics);
         data.put("tradeTrend7d", tradeTrend(7));
         data.put("tradeTrend30d", tradeTrend(30));
-        data.put("healthDistribution", healthDistribution());
-        data.put("productCategoryDistribution", productCategoryDistribution());
+        data.put("healthDistribution", healthDistribution(30));
+        data.put("productCategoryDistribution", productCategoryDistribution(30));
         data.put("recentOrders", jdbcTemplate.queryForList(
                 "select o.id, o.order_no as orderNo, o.amount, o.order_status as orderStatus, o.created_at as createdAt, p.title, up.nickname as buyerName " +
                         "from `order` o left join product p on o.product_id = p.id left join user_profile up on o.buyer_id = up.user_id order by o.id desc limit 8"
@@ -86,5 +103,15 @@ public class StatisticsServiceImpl implements StatisticsService {
                 "select ifnull(province, '未知地区') as name, count(1) as value from user_address group by province order by value desc limit 10"
         ));
         return data;
+    }
+
+    private int normalizeDays(Integer days, int fallback) {
+        if (days == null) {
+            return fallback;
+        }
+        if (days <= 0) {
+            return fallback;
+        }
+        return Math.min(days, 365);
     }
 }

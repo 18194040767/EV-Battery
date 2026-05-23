@@ -2,7 +2,7 @@
   <div v-if="profile.id" class="page-shell">
     <section class="panel-card profile-head">
       <div class="user-box">
-        <el-avatar :size="72" :src="profile.avatar">{{ (profile.nickname || profile.username || 'U').slice(0, 1) }}</el-avatar>
+        <el-avatar :size="72" :src="profileAvatar" class="profile-avatar" />
         <div>
           <h2>{{ profile.nickname || profile.username }}</h2>
           <p>{{ profile.bio || '暂无简介' }}</p>
@@ -62,6 +62,7 @@ const editVisible = ref(false)
 const form = reactive({ nickname: '', avatar: '', city: '', bio: '' })
 
 const isSelf = computed(() => !route.params.id || Number(route.params.id) === Number(userStore.userId))
+const profileAvatar = computed(() => profile.value.avatar || '/default-avatar.png')
 
 const load = async () => {
   const res = await getTradeProfile(route.params.id)
@@ -96,6 +97,14 @@ onMounted(load)
   margin: 0 0 8px;
 }
 
+.profile-avatar {
+  background: #eef4ff;
+}
+
+.profile-avatar :deep(img) {
+  object-fit: cover;
+}
+
 .profile-head p,
 .profile-head span,
 .product-card p,
@@ -113,7 +122,7 @@ onMounted(load)
 .review-card {
   padding: 18px;
   border-radius: 18px;
-  background: #f8fbfa;
+  background: #ffffff;
 }
 
 .cover {

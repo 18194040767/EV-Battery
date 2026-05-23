@@ -13,21 +13,34 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('token') || '',
     userInfo: normalizeUser(JSON.parse(localStorage.getItem('userInfo') || 'null')),
+    guestMode: localStorage.getItem('guestMode') === '1',
     sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1'
   }),
   getters: {
+    isGuest: (state) => !state.token && state.guestMode,
+    isAuthenticated: (state) => !!state.token,
     isAdmin: (state) => state.userInfo?.roles?.includes('ROLE_ADMIN'),
-    displayName: (state) => state.userInfo?.realName || state.userInfo?.username || '用户',
+    displayName: (state) => (state.guestMode && !state.token ? '游客' : state.userInfo?.realName || state.userInfo?.username || '用户'),
     userId: (state) => state.userInfo?.id || null
   },
   actions: {
     setToken(token) {
       this.token = token
+      this.guestMode = false
       localStorage.setItem('token', token || '')
+      localStorage.removeItem('guestMode')
     },
     setUserInfo(userInfo) {
       this.userInfo = normalizeUser(userInfo)
       localStorage.setItem('userInfo', JSON.stringify(this.userInfo || null))
+    },
+    enterGuestMode() {
+      this.token = ''
+      this.userInfo = null
+      this.guestMode = true
+      localStorage.removeItem('token')
+      localStorage.removeItem('userInfo')
+      localStorage.setItem('guestMode', '1')
     },
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed
@@ -40,9 +53,11 @@ export const useUserStore = defineStore('user', {
     clearAuth() {
       this.token = ''
       this.userInfo = null
+      this.guestMode = false
       this.sidebarCollapsed = false
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
+      localStorage.removeItem('guestMode')
       localStorage.removeItem('sidebarCollapsed')
     }
   }

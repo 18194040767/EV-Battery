@@ -2,7 +2,10 @@
   <el-popover placement="bottom-end" :width="380" trigger="click" @show="loadMessages">
     <template #reference>
       <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="message-badge">
-        <el-button text class="message-btn">消息</el-button>
+        <el-button text class="message-btn">
+          <el-icon><Bell /></el-icon>
+          消息
+        </el-button>
       </el-badge>
     </template>
     <div class="message-header">
@@ -31,6 +34,7 @@ import dayjs from 'dayjs'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Bell } from '@element-plus/icons-vue'
 import { getMessageList, getUnreadCount, markAllMessageRead, markMessageRead } from '../api/message'
 
 const router = useRouter()
@@ -38,13 +42,21 @@ const unreadCount = ref(0)
 const messages = ref([])
 
 const refreshUnread = async () => {
-  const res = await getUnreadCount()
-  unreadCount.value = res?.data?.unreadCount || 0
+  try {
+    const res = await getUnreadCount()
+    unreadCount.value = res?.data?.unreadCount || 0
+  } catch {
+    unreadCount.value = 0
+  }
 }
 
 const loadMessages = async () => {
-  const res = await getMessageList({ page: 1, size: 10 })
-  messages.value = res?.data?.records || []
+  try {
+    const res = await getMessageList({ page: 1, size: 10 })
+    messages.value = res?.data?.records || []
+  } catch {
+    messages.value = []
+  }
   await refreshUnread()
 }
 
@@ -76,43 +88,59 @@ onMounted(refreshUnread)
 </script>
 
 <style scoped>
-.message-badge {
-  margin-right: 8px;
-}
 .message-btn {
-  color: var(--app-primary);
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 20px rgba(47, 91, 160, 0.08);
+  color: #26354f;
+  font-weight: 700;
 }
+
+.message-btn .el-icon {
+  margin-right: 7px;
+  font-size: 17px;
+}
+
 .message-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
+
 .message-list {
   max-height: 420px;
   overflow: auto;
 }
+
 .message-item {
   padding: 10px 4px;
   border-bottom: 1px solid var(--app-border);
 }
+
 .message-item.unread strong {
   color: #1d4ed8;
 }
+
 .title-row {
   display: flex;
   justify-content: space-between;
   gap: 8px;
 }
+
 .title-row span {
   color: #94a3b8;
   font-size: 12px;
 }
+
 .message-item p {
   margin: 8px 0;
   color: #334155;
   line-height: 1.5;
 }
+
 .actions {
   display: flex;
   justify-content: flex-end;

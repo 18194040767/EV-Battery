@@ -1,93 +1,104 @@
 ﻿<template>
   <div class="page">
     <el-card class="hero" shadow="never">
-      <div>
-        <p class="eyebrow">档案中心</p>
+      <div class="hero-copy">
+        <p class="eyebrow">档案中心 <span>›</span></p>
         <h2>电池档案管理</h2>
         <p class="desc">档案录入与评估</p>
-      </div>
+       </div>
       <div class="hero-actions">
         <el-upload :auto-upload="false" :show-file-list="false" :on-change="onSingleChange">
-          <el-button type="primary">上传文件</el-button>
+          <el-button type="primary" :icon="Upload">上传文件</el-button>
         </el-upload>
         <el-upload multiple :auto-upload="false" :show-file-list="false" :on-change="onBatchChange">
-          <el-button>批量导入</el-button>
+          <el-button :icon="UploadFilled">批量导入</el-button>
         </el-upload>
-        <el-button @click="openCreate()">手动添加</el-button>
+        <el-button :icon="CirclePlus" @click="openCreate()">手动添加</el-button>
       </div>
     </el-card>
 
     <div class="stats">
-      <el-card shadow="hover">
-        <span>档案总数</span>
-        <strong>{{ stats.total || 0 }}</strong>
+      <el-card class="stat-card stat-card--blue" shadow="never">
+        <div class="stat-icon"><el-icon><FolderOpened /></el-icon></div>
+        <div>
+          <span>档案总数</span>
+          <strong>{{ stats.total || 0 }}</strong>
+        </div>
       </el-card>
-      <el-card shadow="hover">
-        <span>已评估</span>
-        <strong>{{ stats.statusCounts?.ASSESSED || 0 }}</strong>
+      <el-card class="stat-card stat-card--green" shadow="never">
+        <div class="stat-icon"><el-icon><CircleCheck /></el-icon></div>
+        <div>
+          <span>已评估</span>
+          <strong>{{ stats.statusCounts?.ASSESSED || 0 }}</strong>
+        </div>
       </el-card>
-      <el-card shadow="hover">
-        <span>待评估</span>
-        <strong>{{ stats.statusCounts?.PENDING_ASSESSMENT || 0 }}</strong>
+      <el-card class="stat-card stat-card--orange" shadow="never">
+        <div class="stat-icon"><el-icon><Clock /></el-icon></div>
+        <div>
+          <span>待评估</span>
+          <strong>{{ stats.statusCounts?.PENDING_ASSESSMENT || 0 }}</strong>
+        </div>
       </el-card>
-      <el-card shadow="hover">
-        <span>平均健康分</span>
-        <strong>{{ stats.averageHealthScore || 0 }}</strong>
+      <el-card class="stat-card stat-card--purple" shadow="never">
+        <div class="stat-icon"><el-icon><TrendCharts /></el-icon></div>
+        <div>
+          <span>平均健康分</span>
+          <strong>{{ stats.averageHealthScore || 0 }}</strong>
+        </div>
       </el-card>
     </div>
 
-    <el-card shadow="never">
+    <el-card class="toolbar-card" shadow="never">
       <div class="toolbar">
         <div class="toolbar-fields">
-          <el-input v-model="filters.keyword" clearable placeholder="搜索电池编码" class="field" @keyup.enter="loadList" />
+          <el-input v-model="filters.keyword" clearable placeholder="搜索电池编码" class="field" :suffix-icon="Search" @keyup.enter="loadList" />
           <el-select v-model="filters.status" clearable placeholder="状态" class="field" @change="loadList">
             <el-option label="待评估" value="PENDING_ASSESSMENT" />
             <el-option label="已评估" value="ASSESSED" />
             <el-option label="已交易" value="TRADED" />
             <el-option label="已下架" value="OFFLINE" />
           </el-select>
-          <el-button @click="loadList">查询</el-button>
+          <el-button type="primary" @click="loadList">查询</el-button>
         </div>
         <div class="toolbar-actions">
-          <el-button :disabled="!selectedIds.length" :loading="batchLoading" @click="runBatchAssessment">批量评估</el-button>
-          <el-button :disabled="!selectedIds.length" type="danger" @click="removeBatch">批量删除</el-button>
+          <el-button :disabled="!selectedIds.length" :loading="batchLoading" :icon="Histogram" @click="runBatchAssessment">批量评估</el-button>
+          <el-button :disabled="!selectedIds.length" type="danger" :icon="Delete" @click="removeBatch">批量删除</el-button>
         </div>
       </div>
     </el-card>
 
-    <el-card shadow="never">
+    <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="records" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" />
         <el-table-column prop="batteryCode" label="电池编码" min-width="180" />
         <el-table-column prop="sourceType" label="来源" min-width="120" />
         <el-table-column label="状态" width="140">
-          <template #default="{ row }">{{ formatBatteryStatus(row.status) }}</template>
+          <template #default="{ row }">
+            <el-tag class="status-tag" type="success" effect="light">{{ formatBatteryStatus(row.status) }}</el-tag>
+          </template>
         </el-table-column>
         <el-table-column prop="voltage" label="电压(V)" width="110" />
         <el-table-column prop="cycleCount" label="循环次数" width="120" />
-        <el-table-column label="最新健康分" min-width="180">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
-            <el-progress :percentage="Number(row.latestHealthScore || 0)" :stroke-width="8" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="latestHealthLevel" label="健康等级" width="120" />
-        <el-table-column prop="updatedAt" label="更新时间" min-width="180" />
-        <el-table-column label="操作" width="260" fixed="right">
-          <template #default="{ row }">
-            <el-button link @click="openDetail(row)">详情</el-button>
-            <el-button link @click="runSingleAssessment(row)">评估</el-button>
-            <el-button link @click="openCreate(row)">编辑</el-button>
-            <el-button link type="danger" @click="removeOne(row)">删除</el-button>
+            <div class="row-actions">
+              <el-button link class="blue-action" :icon="View" @click="openDetail(row)">详情</el-button>
+            <el-button link class="assess-action" :icon="TrendCharts" @click="runSingleAssessment(row)">评估</el-button>
+              <el-button link class="blue-action" :icon="EditPen" @click="openCreate(row)">编辑</el-button>
+              <el-button link type="danger" :icon="Delete" @click="removeOne(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
       <el-pagination
         class="pager"
-        layout="total, prev, pager, next"
+        layout="total, prev, pager, next, sizes"
         :current-page="page"
         :page-size="pageSize"
+        :page-sizes="[10, 12, 20, 50]"
         :total="total"
         @current-change="changePage"
+        @size-change="changePageSize"
       />
     </el-card>
 
@@ -149,6 +160,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { CircleCheck, CirclePlus, Clock, Delete, EditPen, FolderOpened, Histogram, Search, TrendCharts, Upload, UploadFilled, View } from '@element-plus/icons-vue'
 import { createBatteryManual, deleteBattery, deleteBatteryBatch, getBatteryList, getBatteryStatistics, updateBattery, uploadBatch, uploadSingle } from '../../api/battery'
 import { getBatchAssessmentTask, getLatest, triggerAssessment, triggerBatchAssessment } from '../../api/assessment'
 import { normalizeId } from '../../utils/id'
@@ -216,6 +228,12 @@ const handleSelectionChange = (rows) => {
 
 const changePage = (value) => {
   page.value = value
+  loadList()
+}
+
+const changePageSize = (value) => {
+  pageSize.value = value
+  page.value = 1
   loadList()
 }
 
@@ -418,28 +436,69 @@ onMounted(async () => {
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .hero {
-  border-radius: 24px;
-  border: 1px solid #dbe8f4;
-  background: linear-gradient(135deg, #f7fbff, #eef5ff);
+  min-height: 284px;
+  border: 1px solid #dfeaff;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.86) 34%, rgba(255, 255, 255, 0.16) 58%),
+    url('/battery-archive-hero.png') center right / cover no-repeat;
+  box-shadow: 0 18px 44px rgba(55, 105, 190, 0.08);
+}
+
+.hero :deep(.el-card__body) {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  min-height: 284px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px 36px;
+}
+
+.hero-copy {
+  max-width: 560px;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #6482a8;
-  font-size: 13px;
+  color: #657895;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.eyebrow span {
+  color: #334b73;
+  font-size: 26px;
+  line-height: 0;
+  vertical-align: -2px;
+}
+
+.hero h2 {
+  margin: 0;
+  color: #0b1228;
+  font-size: 40px;
+  line-height: 1.18;
+  font-weight: 800;
 }
 
 .desc {
-  margin: 8px 0 0;
-  color: #60748a;
+  margin: 14px 0 0;
+  color: #61728c;
+  font-size: 20px;
+}
+
+.hero-note {
+  width: 330px;
+  margin: 28px 0 0 548px;
+  color: #526684;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.hero-actions {
+  margin-top: 15px;
 }
 
 .hero-actions,
@@ -455,6 +514,18 @@ onMounted(async () => {
 
 .toolbar {
   justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.toolbar-fields {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+}
+
+.toolbar-actions {
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .field {
@@ -464,20 +535,158 @@ onMounted(async () => {
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
+}
+
+.stat-card {
+  border: 1px solid #e3ebf7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(47, 92, 164, 0.06);
+}
+
+.stat-card :deep(.el-card__body) {
+  display: flex;
+  min-height: 122px;
+  align-items: center;
+  gap: 22px;
+  padding: 22px 24px;
+}
+
+.stat-icon {
+  display: inline-flex;
+  width: 66px;
+  height: 66px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 36px;
+}
+
+.stat-card--blue .stat-icon {
+  color: #2576ff;
+  background: #eef5ff;
+}
+
+.stat-card--green .stat-icon {
+  color: #1f75ff;
+  background: #ffffff;
+}
+
+.stat-card--orange .stat-icon {
+  color: #ff7a1a;
+  background: #fff3e9;
+}
+
+.stat-card--purple .stat-icon {
+  color: #8b61ff;
+  background: #f3efff;
 }
 
 .stats .el-card span {
   display: block;
-  color: #73849b;
-  font-size: 13px;
+  color: #3f4b62;
+  font-size: 16px;
 }
 
 .stats .el-card strong {
   display: block;
-  margin-top: 10px;
-  color: #223348;
-  font-size: 28px;
+  margin-top: 8px;
+  color: #07112a;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.toolbar-card,
+.table-card {
+  border: 1px solid #e4ebf7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(47, 92, 164, 0.06);
+}
+
+.toolbar-card :deep(.el-card__body) {
+  padding: 22px 24px;
+}
+
+.table-card :deep(.el-card__body) {
+  padding: 20px 22px 16px;
+}
+
+.toolbar :deep(.el-input__wrapper),
+.toolbar :deep(.el-select__wrapper) {
+  height: 44px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px #d7e0ef inset;
+}
+
+.toolbar :deep(.el-button) {
+  height: 44px;
+  min-width: 98px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hero-actions :deep(.el-button) {
+  height: 48px;
+  min-width: 144px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.table-card :deep(.el-table) {
+  color: #2c3b55;
+  font-size: 16px;
+}
+
+.table-card :deep(.el-table__header th) {
+  height: 58px;
+  color: #334159;
+  font-weight: 700;
+  background: #ffffff;
+}
+
+.table-card :deep(.el-table__row td) {
+  height: 60px;
+}
+
+.status-tag {
+  height: 28px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 6px;
+  color: #0d9a7d;
+  background: #dbf6ef;
+  font-weight: 700;
+}
+
+.assess-action {
+  color: #10a37f;
+}
+
+.blue-action {
+  color: #1f75ff;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.row-actions :deep(.el-button) {
+  margin-left: 0;
+}
+
+.pager :deep(.el-pager li.is-active) {
+  color: #ffffff;
+  background: #1f75ff;
+  border-radius: 8px;
 }
 
 .pager {
@@ -490,9 +699,27 @@ onMounted(async () => {
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .hero-note {
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 768px) {
+  .hero {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 58%, rgba(255, 255, 255, 0.2) 100%),
+      url('/battery-archive-hero.png') center right / cover no-repeat;
+  }
+
+  .hero :deep(.el-card__body) {
+    padding: 24px;
+  }
+
+  .hero h2 {
+    font-size: 32px;
+  }
+
   .stats {
     grid-template-columns: 1fr;
   }
@@ -500,7 +727,14 @@ onMounted(async () => {
   .field {
     width: 100%;
   }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar-actions {
+    margin-left: 0;
+  }
 }
 </style>
-
-

@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-const placeholder = 'https://dummyimage.com/600x420/dce7e5/1e3a38&text=EV'
+const placeholder = 'https://dummyimage.com/600x420/eaf2ff/1f75ff&text=EV'
 
 defineProps({
   products: {
@@ -65,8 +65,8 @@ defineProps({
   cursor: pointer;
   border-radius: 18px;
   overflow: hidden;
-  background: #f8fbfa;
-  border: 1px solid rgba(15, 118, 110, 0.08);
+  background: #ffffff;
+  border: 1px solid rgba(210, 222, 242, 0.9);
 }
 
 .product-card img {

@@ -18,6 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
+import java.net.URLEncoder;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/contract")
@@ -32,6 +34,20 @@ public class ContractController {
     @PostMapping("/generate")
     public Result<Object> generate(@RequestParam Long orderId) {
         return Result.success(contractService.ensureContractForOrder(orderId));
+    }
+
+    @PostMapping("/generate/download")
+    public ResponseEntity<byte[]> generateAndDownload(@RequestParam Long orderId) {
+        Long currentUserId = AuthUserContext.getCurrentUserId();
+        Map<String, Object> contract = contractService.ensureContractForOrder(orderId);
+        Long contractId = Long.parseLong(String.valueOf(contract.get("id")));
+        byte[] bytes = contractService.loadContractPdf(contractId, currentUserId, adminService.isAdmin(currentUserId));
+        String contractNo = String.valueOf(contract.getOrDefault("contractNo", "contract-" + contractId));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition("attachment", "contract-" + contractId + ".pdf", contractNo + ".pdf"))
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(bytes.length)
+                .body(bytes);
     }
 
     @GetMapping("/list")
@@ -58,7 +74,7 @@ public class ContractController {
         Long currentUserId = AuthUserContext.getCurrentUserId();
         byte[] bytes = contractService.loadContractPdf(id, currentUserId, adminService.isAdmin(currentUserId));
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''contract-" + id + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition("attachment", "contract-" + id + ".pdf", "contract-" + id + ".pdf"))
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(bytes.length)
                 .body(bytes);
@@ -69,9 +85,25 @@ public class ContractController {
         Long currentUserId = AuthUserContext.getCurrentUserId();
         byte[] bytes = contractService.loadContractPdf(id, currentUserId, adminService.isAdmin(currentUserId));
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + new String(("contract-" + id + ".pdf").getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1))
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition("inline", "contract-" + id + ".pdf", "contract-" + id + ".pdf"))
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(bytes.length)
                 .body(bytes);
+    }
+
+    private String contentDisposition(String disposition, String fallbackFilename, String filename) {
+        return disposition + "; filename=\"" + sanitizeAsciiFilename(fallbackFilename) + "\"; filename*=UTF-8''" + encodeFilename(filename);
+    }
+
+    private String sanitizeAsciiFilename(String filename) {
+        return String.valueOf(filename == null ? "document.pdf" : filename).replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private String encodeFilename(String filename) {
+        try {
+            return URLEncoder.encode(String.valueOf(filename == null ? "document.pdf" : filename), StandardCharsets.UTF_8.name()).replace("+", "%20");
+        } catch (Exception ex) {
+            return "document.pdf";
+        }
     }
 }

@@ -22,8 +22,8 @@ public class StatisticsController {
     }
 
     @GetMapping("/health-distribution")
-    public Result<Object> healthDistribution() {
-        return Result.success(statisticsService.healthDistribution());
+    public Result<Object> healthDistribution(@RequestParam(required = false) Integer days) {
+        return Result.success(statisticsService.healthDistribution(days));
     }
 
     @GetMapping("/source-distribution")
@@ -32,7 +32,7 @@ public class StatisticsController {
     }
 
     @GetMapping("/product-category-distribution")
-    public Result<Object> productCategoryDistribution() {
-        return Result.success(statisticsService.productCategoryDistribution());
+    public Result<Object> productCategoryDistribution(@RequestParam(required = false) Integer days) {
+        return Result.success(statisticsService.productCategoryDistribution(days));
     }
 }

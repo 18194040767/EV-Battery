@@ -2,10 +2,13 @@
   <el-container class="layout-shell">
     <el-drawer v-model="mobileMenuVisible" :with-header="false" direction="ltr" size="256px" class="mobile-nav">
       <aside class="drawer-aside">
-        <div class="brand-block">
-          <p class="brand-kicker">EV Battery Platform</p>
-          <h1>梯次利用交易平台</h1>
-        </div>
+        <button class="brand-block" type="button" @click="goHome" aria-label="返回首页">
+          <span class="css-logo" aria-hidden="true"><img src="/app-logo.png" alt="" /></span>
+          <span class="brand-copy">
+            <strong>EV-BatterySecondLife</strong>
+            <small>退役动力电池二手交易与健康评估平台</small>
+          </span>
+        </button>
         <el-menu :default-active="$route.path" router class="nav-menu mobile-menu">
           <el-menu-item v-for="item in frontMenus" :key="item.path" :index="item.path">
             <AppNavIcon :name="item.icon" />
@@ -15,11 +18,14 @@
       </aside>
     </el-drawer>
 
-    <el-aside :width="collapsed ? '76px' : '236px'" class="layout-aside">
-      <div class="brand-block" :class="{ compact: collapsed }">
-        <p class="brand-kicker">{{ collapsed ? 'EV' : 'EV Battery Platform' }}</p>
-        <h1>{{ collapsed ? '平台' : '梯次利用交易平台' }}</h1>
-      </div>
+    <el-aside :width="collapsed ? '76px' : '300px'" class="layout-aside">
+      <button class="brand-block" :class="{ compact: collapsed }" type="button" @click="goHome" aria-label="返回首页">
+        <span class="css-logo" aria-hidden="true"><img src="/app-logo.png" alt="" /></span>
+        <span v-if="!collapsed" class="brand-copy">
+          <strong>EV-BatterySecondLife</strong>
+          <small>退役动力电池二手交易与健康评估平台</small>
+        </span>
+      </button>
       <el-menu :default-active="$route.path" router :collapse="collapsed" :collapse-transition="false" class="nav-menu">
         <el-menu-item v-for="item in frontMenus" :key="item.path" :index="item.path">
           <AppNavIcon :name="item.icon" />
@@ -54,13 +60,14 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 import AppNavIcon from '../components/AppNavIcon.vue'
 import MessageCenter from '../components/MessageCenter.vue'
 import UserDropdown from '../components/UserDropdown.vue'
 
 const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
 const mobileMenuVisible = ref(false)
 const isMobile = ref(false)
@@ -70,6 +77,7 @@ const frontMenus = [
   { path: '/battery/list', label: '电池档案', icon: 'battery' },
   { path: '/assessment', label: '健康评估', icon: 'assessment' },
   { path: '/trade/product-list', label: '商品市场', icon: 'market' },
+  { path: '/contract/verify', label: '合同查验', icon: 'contracts' },
   { path: '/logistics/list', label: '物流追踪', icon: 'logistics' }
 ]
 
@@ -86,6 +94,11 @@ const handleMenuAction = () => {
   } else {
     userStore.toggleSidebar()
   }
+}
+
+const goHome = () => {
+  mobileMenuVisible.value = false
+  router.push('/home')
 }
 
 onMounted(() => {
@@ -105,9 +118,10 @@ onBeforeUnmount(() => {
 
 .layout-aside,
 .drawer-aside {
-  background: linear-gradient(180deg, #123c39 0%, #0d2c2c 100%);
-  color: #f4fffe;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  color: #101a33;
+  border-right: 1px solid #e4ebf5;
+  box-shadow: 8px 0 26px rgba(37, 88, 170, 0.04);
 }
 
 .layout-aside {
@@ -115,24 +129,57 @@ onBeforeUnmount(() => {
 }
 
 .brand-block {
-  padding: 28px 18px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 26px 18px 28px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
 }
 
 .brand-block.compact {
-  padding-inline: 14px;
+  justify-content: center;
+  padding-inline: 12px;
 }
 
-.brand-kicker {
-  margin: 0 0 8px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
+.css-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  background: transparent;
+  overflow: hidden;
 }
 
-.brand-block h1 {
-  margin: 0;
-  font-size: 20px;
+.css-logo img {
+  width: 146%;
+  height: 146%;
+  display: block;
+  object-fit: cover;
+}
+
+.brand-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.brand-copy strong {
+  color: #071331;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.12;
+}
+
+.brand-copy small {
+  color: #52627d;
+  font-size: 11px;
   line-height: 1.35;
 }
 
@@ -146,9 +193,38 @@ onBeforeUnmount(() => {
 }
 
 :deep(.nav-menu .el-menu-item) {
-  color: rgba(255, 255, 255, 0.86);
-  border-radius: 14px;
-  margin: 6px 10px;
+  height: 56px;
+  margin: 2px 14px 10px;
+  border-radius: 12px;
+  color: #1f2a44;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.nav-menu .nav-icon) {
+  width: 30px;
+  height: 30px;
+  margin-right: 16px;
+  color: #64748b;
+}
+
+:deep(.nav-menu.el-menu--collapse .nav-icon) {
+  width: 34px !important;
+  min-width: 34px;
+  height: 34px !important;
+  flex: 0 0 34px;
+  margin-right: 0;
+}
+
+:deep(.nav-menu.el-menu--collapse .nav-icon svg) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.nav-menu.el-menu--collapse .el-menu-item) {
+  justify-content: center;
+  padding: 0;
 }
 
 :deep(.nav-menu .el-menu-item .el-tooltip__trigger) {
@@ -159,17 +235,29 @@ onBeforeUnmount(() => {
 }
 
 :deep(.nav-menu .el-menu-item.is-active) {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
+  color: #1677ff;
+  background: linear-gradient(90deg, #eaf2ff 0%, #f1f6ff 100%);
+  box-shadow: inset 0 0 0 1px rgba(31, 117, 255, 0.02);
+}
+
+:deep(.nav-menu .el-menu-item.is-active .nav-icon),
+:deep(.nav-menu .el-menu-item:hover .nav-icon) {
+  color: #1677ff;
+}
+
+:deep(.nav-menu .el-menu-item:hover) {
+  color: #1677ff;
+  background: #f3f7ff;
 }
 
 .layout-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 70px;
   padding: 0 28px;
-  border-bottom: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.76);
+  border-bottom: 1px solid #e7edf6;
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(18px);
 }
 
@@ -201,7 +289,7 @@ onBeforeUnmount(() => {
 }
 
 .layout-main {
-  padding: 24px;
+  padding: 24px 24px 18px;
 }
 
 @media (max-width: 992px) {

@@ -156,7 +156,7 @@ const drawTrack = () => {
   const linePath = path.value.map((point) => [point.lng, point.lat])
   polyline.value = new AMap.Polyline({
     path: linePath,
-    strokeColor: '#1d5c57',
+    strokeColor: '#2f7cff',
     strokeWeight: 6,
     lineJoin: 'round',
     lineCap: 'round',
@@ -317,7 +317,7 @@ onUnmounted(() => {
   height: 100%;
   border-radius: 22px;
   overflow: hidden;
-  background: linear-gradient(180deg, #eef5f2, #e5efeb);
+  background: linear-gradient(180deg, #eef5ff, #e6efff);
 }
 
 .map-meta {
@@ -363,7 +363,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
-  color: #1d5c57;
+  color: #2f7cff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -372,7 +372,7 @@ onUnmounted(() => {
 }
 
 .icon-button:hover:not(:disabled) {
-  background: rgba(29, 92, 87, 0.12);
+  background: rgba(47, 124, 255, 0.12);
   transform: translateY(-1px);
 }
 
@@ -390,8 +390,8 @@ onUnmounted(() => {
   overflow: auto;
   padding: 22px 18px 18px;
   border-radius: 22px;
-  background: linear-gradient(180deg, #fcfdfd, #f3f8f7);
-  border: 1px solid rgba(29, 92, 87, 0.08);
+  background: #ffffff;
+  border: 1px solid rgba(210, 222, 242, 0.9);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
   transition: height 0.24s ease;
 }
@@ -448,8 +448,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(29, 92, 87, 0.14);
-  border: 1px solid rgba(29, 92, 87, 0.28);
+  background: rgba(47, 124, 255, 0.12);
+  border: 1px solid rgba(47, 124, 255, 0.24);
   font-size: 18px;
 }
 

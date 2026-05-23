@@ -33,7 +33,7 @@ defineProps({
   padding: 7px 12px;
   border-radius: 999px;
   color: var(--app-primary);
-  background: rgba(15, 118, 110, 0.08);
+  background: #eef5ff;
   font-size: 12px;
   font-weight: 700;
 }

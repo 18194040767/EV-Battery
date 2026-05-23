@@ -43,12 +43,12 @@ public class ContractServiceImpl implements ContractService {
     @Override
     public Map<String, Object> ensureContractForOrder(Long orderId) {
         Contract existing = contractMapper.selectOne(new LambdaQueryWrapper<Contract>().eq(Contract::getOrderId, orderId).last("limit 1"));
-        if (existing != null && StringUtils.hasText(existing.getPdfPath()) && new File(existing.getPdfPath()).exists()) {
-            return toDetail(existing);
-        }
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
             throw new IllegalArgumentException("订单不存在");
+        }
+        if (existing != null && StringUtils.hasText(existing.getPdfPath()) && Files.exists(Paths.get(existing.getPdfPath()))) {
+            return toDetail(existing);
         }
         Map<String, Object> joined = loadOrderJoined(orderId);
         if (joined == null) {
@@ -59,23 +59,24 @@ public class ContractServiceImpl implements ContractService {
         String contentHash = HashUtil.sha256(contentPayload);
 
         List<String> lines = new ArrayList<String>();
-        lines.add("Contract No: " + contractNo);
-        lines.add("Generated At: " + LocalDateTime.now());
-        lines.add("Buyer: " + value(joined.get("buyerName")) + " / ID " + order.getBuyerId() + " / Phone " + maskPhone(joined.get("buyerPhone")));
-        lines.add("Seller: " + value(joined.get("sellerName")) + " / ID " + order.getSellerId() + " / Phone " + maskPhone(joined.get("sellerPhone")));
-        lines.add("Battery Code: " + value(joined.get("batteryCode")));
-        lines.add("Health Score: " + value(joined.get("healthScore")));
-        lines.add("Product: " + value(joined.get("productTitle")));
-        lines.add("Order No: " + value(order.getOrderNo()));
-        lines.add("Quantity: " + value(order.getQuantity()));
-        lines.add("Unit Price: " + value(order.getUnitPrice()));
-        lines.add("Total Amount: " + value(order.getAmount()));
-        lines.add("Pay Time: " + value(order.getPayTime()));
-        lines.add("Complete Time: " + value(order.getCompleteTime()));
-        lines.add("Disclaimer: The platform provides transaction matching and notarization services only.");
-        lines.add("Integrity Rule: SHA-256 digest is used to verify that the contract remains unchanged.");
+        lines.add("合同编号：" + contractNo);
+        lines.add("生成时间：" + LocalDateTime.now());
+        lines.add("买方：" + value(joined.get("buyerName")) + "（用户ID：" + order.getBuyerId() + "，电话：" + maskPhone(joined.get("buyerPhone")) + "）");
+        lines.add("卖方：" + value(joined.get("sellerName")) + "（用户ID：" + order.getSellerId() + "，电话：" + maskPhone(joined.get("sellerPhone")) + "）");
+        lines.add("订单编号：" + value(order.getOrderNo()));
+        lines.add("商品名称：" + value(joined.get("productTitle")));
+        lines.add("电池档案编号：" + value(joined.get("batteryCode")));
+        lines.add("健康评分：" + value(joined.get("healthScore")));
+        lines.add("交易数量：" + value(order.getQuantity()));
+        lines.add("商品单价：" + value(order.getUnitPrice()) + " 元");
+        lines.add("交易总额：" + value(order.getAmount()) + " 元");
+        lines.add("支付时间：" + value(order.getPayTime()));
+        lines.add("完成时间：" + value(order.getCompleteTime()));
+        lines.add("履约约定：买卖双方确认该订单对应电池商品已完成平台交易流程，商品信息、价格、数量与订单记录一致。");
+        lines.add("存证说明：本合同 PDF 生成后计算 SHA-256 摘要并保存，可在合同查验页上传文件核验是否被篡改。");
+        lines.add("平台声明：平台提供交易撮合、合同生成和存证校验服务，实际商品交付、质量承诺与售后责任以订单及双方约定为准。");
 
-        byte[] pdfBytes = PdfGenerator.generateSimpleDocument("EV Battery Electronic Contract", lines);
+        byte[] pdfBytes = PdfGenerator.generateSimpleDocument("动力电池电子交易合同", lines);
         String pdfHash = HashUtil.sha256(pdfBytes);
         File pdfFile = Paths.get(storageRoot, "contracts", contractNo + ".pdf").toFile();
         PdfGenerator.writeToFile(pdfFile, pdfBytes);
@@ -93,6 +94,9 @@ public class ContractServiceImpl implements ContractService {
             contractMapper.insert(contract);
         } else {
             contractMapper.updateById(contract);
+        }
+        if (contract.getId() == null) {
+            contract = contractMapper.selectOne(new LambdaQueryWrapper<Contract>().eq(Contract::getOrderId, orderId).last("limit 1"));
         }
         return toDetail(contract);
     }
@@ -178,6 +182,8 @@ public class ContractServiceImpl implements ContractService {
         if (!admin && !currentUserId.equals(order.getBuyerId()) && !currentUserId.equals(order.getSellerId())) {
             throw new IllegalArgumentException("无权访问该合同");
         }
+        ensureContractForOrder(contract.getOrderId());
+        contract = contractMapper.selectById(contractId);
         return readFile(contract.getPdfPath());
     }
 
@@ -207,7 +213,26 @@ public class ContractServiceImpl implements ContractService {
         data.put("pdfHash", contract.getPdfHash());
         data.put("verifyCount", contract.getVerifyCount() == null ? 0 : contract.getVerifyCount());
         data.put("downloadUrl", "/api/contract/" + contract.getId() + "/download");
+        Map<String, Object> rows = loadContractListRow(contract.getId());
+        if (rows != null) {
+            data.putAll(rows);
+        }
         return data;
+    }
+
+    private Map<String, Object> loadContractListRow(Long contractId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "select c.id, c.contract_no as contractNo, c.order_id as orderId, c.hash_digest as hashDigest, c.content_hash as contentHash, c.pdf_hash as pdfHash, " +
+                        "c.verify_count as verifyCount, c.created_at as createdAt, o.order_no as orderNo, p.title as productTitle, buyer.username as buyerName, seller.username as sellerName " +
+                        "from contract c " +
+                        "left join `order` o on c.order_id = o.id " +
+                        "left join product p on o.product_id = p.id " +
+                        "left join `user` buyer on o.buyer_id = buyer.id " +
+                        "left join `user` seller on o.seller_id = seller.id " +
+                        "where c.id = ? limit 1",
+                contractId
+        );
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     private void ensureEligibleContracts(Long currentUserId, boolean admin) {

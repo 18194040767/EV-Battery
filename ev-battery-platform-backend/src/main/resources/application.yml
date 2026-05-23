@@ -7,6 +7,10 @@ spring:
 ml:
   python-path: python
   script-path: ../ml/predict.py
+  timeout-seconds: 20
+  startup-timeout-seconds: 45
+  retry-count: 1
+  warmup: true
 
 llm:
   enabled: true

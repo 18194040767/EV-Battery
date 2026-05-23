@@ -53,15 +53,45 @@
       </section>
     </transition>
 
-    <button class="pet-trigger" type="button" @click="togglePanel">
-      <span class="pet-body" :class="{ active: panelVisible }">
-        <span class="pet-eye left"></span>
-        <span class="pet-eye right"></span>
-        <span class="pet-cheek left"></span>
-        <span class="pet-cheek right"></span>
-        <span class="pet-mouth"></span>
+    <div v-if="bubbleVisible" class="assistant-bubble">
+      <button class="robot-button" type="button" aria-label="打开 AI 小助手" @click="togglePanel">
+        <span class="robot-figure" aria-hidden="true">
+          <span class="robot-antenna left"></span>
+          <span class="robot-antenna right"></span>
+          <span class="robot-ear left"></span>
+          <span class="robot-ear right"></span>
+          <span class="robot-head">
+            <span class="robot-face">
+              <span class="blink-eye left"></span>
+              <span class="blink-eye right"></span>
+              <span class="robot-smile"></span>
+            </span>
+          </span>
+          <span class="robot-body"></span>
+        </span>
+      </button>
+      <button class="bubble-copy" type="button" @click="togglePanel">
+        <strong>Hi，我是小E</strong>
+        <span>有问题可以随时问我哦~</span>
+      </button>
+      <button class="bubble-close" type="button" aria-label="关闭助手提示" @click="bubbleVisible = false">×</button>
+    </div>
+
+    <button v-else class="mini-robot" type="button" aria-label="打开 AI 小助手" @click="togglePanel">
+      <span class="robot-figure" aria-hidden="true">
+        <span class="robot-antenna left"></span>
+        <span class="robot-antenna right"></span>
+        <span class="robot-ear left"></span>
+        <span class="robot-ear right"></span>
+        <span class="robot-head">
+          <span class="robot-face">
+            <span class="blink-eye left"></span>
+            <span class="blink-eye right"></span>
+            <span class="robot-smile"></span>
+          </span>
+        </span>
+        <span class="robot-body"></span>
       </span>
-      <span class="pet-label">{{ panelVisible ? '在线陪伴中' : '点我提问' }}</span>
     </button>
   </div>
 </template>
@@ -72,6 +102,7 @@ import { ElMessage } from 'element-plus'
 import { streamAssistantReply } from '../api/assistant'
 
 const panelVisible = ref(false)
+const bubbleVisible = ref(true)
 const loading = ref(false)
 const input = ref('')
 const messages = ref([
@@ -85,6 +116,7 @@ const quickPrompts = ['怎么支付', '怎么查物流', '怎么查看合同']
 
 const togglePanel = () => {
   panelVisible.value = !panelVisible.value
+  bubbleVisible.value = true
 }
 
 const usePrompt = (prompt) => {
@@ -146,10 +178,10 @@ const submit = async () => {
 .pet-panel {
   width: min(340px, calc(100vw - 28px));
   max-height: 480px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(29, 92, 87, 0.14);
-  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(204, 217, 238, 0.88);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 60px rgba(37, 88, 170, 0.18);
   backdrop-filter: blur(16px);
   overflow: hidden;
 }
@@ -186,21 +218,21 @@ const submit = async () => {
 }
 
 .quick-chip {
-  border: 1px solid rgba(29, 92, 87, 0.14);
-  border-radius: 999px;
-  background: #f7fbfa;
-  color: #24534f;
-  font-size: 12px;
   padding: 6px 10px;
+  border: 1px solid rgba(204, 217, 238, 0.95);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #36577e;
+  font-size: 12px;
   cursor: pointer;
 }
 
 .pet-thread {
   display: flex;
+  max-height: 240px;
   flex-direction: column;
   gap: 10px;
   padding: 14px 18px;
-  max-height: 240px;
   overflow: auto;
 }
 
@@ -212,19 +244,19 @@ const submit = async () => {
 
 .pet-bubble p {
   margin: 0;
-  line-height: 1.6;
   font-size: 13px;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
 .pet-bubble.assistant {
   align-self: flex-start;
-  background: #f7fbfa;
+  background: #f6f9ff;
 }
 
 .pet-bubble.user {
   align-self: flex-end;
-  background: rgba(29, 92, 87, 0.1);
+  background: rgba(47, 124, 255, 0.1);
 }
 
 .pet-bubble.loading {
@@ -241,132 +273,220 @@ const submit = async () => {
   font-size: 12px;
 }
 
-.pet-trigger {
+.assistant-bubble {
   position: relative;
-  border: none;
-  background: transparent;
   display: flex;
+  width: 330px;
+  min-height: 94px;
   align-items: center;
-  gap: 12px;
+  padding: 13px 42px 13px 118px;
+  border: 1px solid rgba(214, 224, 244, 0.78);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 38px rgba(79, 126, 195, 0.2);
+}
+
+.robot-button,
+.mini-robot {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
 }
 
-.pet-body {
+.robot-button {
+  position: absolute;
+  left: -1px;
+  bottom: 1px;
+  width: 116px;
+  height: 116px;
+}
+
+.bubble-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #263853;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bubble-copy strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.bubble-copy span {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.bubble-close {
+  position: absolute;
+  top: 22px;
+  right: 18px;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #6b778c;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.mini-robot {
+  width: 86px;
+  height: 86px;
+  border-radius: 26px;
+}
+
+.robot-figure {
   position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 28px 28px 24px 24px;
-  background: linear-gradient(135deg, #ffb7d5 0%, #ff8fb8 55%, #ff7aa8 100%);
-  box-shadow: 0 18px 34px rgba(15, 118, 110, 0.28);
-  animation: floaty 2.8s ease-in-out infinite;
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 14px 22px rgba(72, 128, 214, 0.22));
 }
 
-.pet-body.active {
-  animation-duration: 1.8s;
-}
-
-.pet-body::before,
-.pet-body::after {
-  content: '';
+.robot-head {
   position: absolute;
-  top: -8px;
-  width: 18px;
-  height: 18px;
-  background: #ff9bc1;
-  border-radius: 8px 8px 2px 8px;
+  left: 18%;
+  top: 12%;
+  z-index: 2;
+  width: 64%;
+  height: 52%;
+  border-radius: 48% 48% 42% 42%;
+  background: linear-gradient(145deg, #ffffff 0%, #f4f8ff 72%, #e6efff 100%);
+  box-shadow: inset -5px -7px 16px rgba(65, 118, 205, 0.12), inset 5px 5px 16px rgba(255, 255, 255, 0.9);
 }
 
-.pet-body::before {
-  left: 10px;
-  transform: rotate(-22deg);
-}
-
-.pet-body::after {
-  right: 10px;
-  transform: scaleX(-1) rotate(-22deg);
-}
-
-.pet-eye,
-.pet-cheek,
-.pet-mouth {
+.robot-face {
   position: absolute;
+  left: 16%;
+  top: 26%;
+  width: 68%;
+  height: 42%;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #101a33 0%, #071326 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
 }
 
-.pet-eye {
-  top: 26px;
-  width: 7px;
-  height: 11px;
+.robot-body {
+  position: absolute;
+  left: 27%;
+  top: 57%;
+  width: 46%;
+  height: 31%;
+  border-radius: 48% 48% 42% 42%;
+  background: linear-gradient(145deg, #ffffff 0%, #edf4ff 100%);
+  box-shadow: inset -4px -7px 14px rgba(65, 118, 205, 0.12);
+}
+
+.robot-body::before,
+.robot-body::after {
+  position: absolute;
+  top: 20%;
+  width: 24%;
+  height: 42%;
   border-radius: 999px;
-  background: #ffffff;
+  background: linear-gradient(145deg, #ffffff 0%, #e8f0ff 100%);
+  content: "";
+}
+
+.robot-body::before {
+  left: -20%;
+  transform: rotate(18deg);
+}
+
+.robot-body::after {
+  right: -20%;
+  transform: rotate(-18deg);
+}
+
+.robot-ear,
+.robot-antenna {
+  position: absolute;
+  z-index: 1;
+  background: linear-gradient(145deg, #79a9ff 0%, #2777ff 100%);
+}
+
+.robot-ear {
+  top: 30%;
+  width: 12%;
+  height: 22%;
+  border-radius: 999px;
+}
+
+.robot-ear.left {
+  left: 9%;
+}
+
+.robot-ear.right {
+  right: 9%;
+}
+
+.robot-antenna {
+  top: 8%;
+  width: 8%;
+  height: 18%;
+  border-radius: 999px;
+}
+
+.robot-antenna.left {
+  left: 28%;
+  transform: rotate(-20deg);
+}
+
+.robot-antenna.right {
+  right: 28%;
+  transform: rotate(20deg);
+}
+
+.blink-eye {
+  position: absolute;
+  top: 30%;
+  width: 12%;
+  height: 30%;
+  border-radius: 999px;
+  background: #bff9ff;
+  box-shadow: 0 0 8px rgba(189, 249, 255, 0.85);
   transform-origin: center;
-  animation: blink 4.6s ease-in-out infinite;
+  animation: robot-blink 4.2s ease-in-out infinite;
 }
 
-.pet-eye.left {
-  left: 21px;
+.blink-eye.left {
+  left: 27%;
 }
 
-.pet-eye.right {
-  right: 21px;
+.blink-eye.right {
+  right: 27%;
 }
 
-.pet-cheek {
-  top: 39px;
-  width: 12px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.42);
-}
-
-.pet-cheek.left {
-  left: 13px;
-}
-
-.pet-cheek.right {
-  right: 13px;
-}
-
-.pet-mouth {
+.robot-smile {
+  position: absolute;
   left: 50%;
-  bottom: 17px;
-  width: 18px;
-  height: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.96);
+  bottom: 18%;
+  width: 28%;
+  height: 22%;
+  border: 3px solid #bff9ff;
   border-top: 0;
   border-left-color: transparent;
   border-right-color: transparent;
   border-bottom-left-radius: 999px;
   border-bottom-right-radius: 999px;
-  transform: translateX(-50%) translateY(1px);
-}
-
-.pet-trigger::before,
-.pet-trigger::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.5);
-  top: 42px;
-}
-
-.pet-trigger::before {
-  right: 50px;
-}
-
-.pet-trigger::after {
-  right: 12px;
-}
-
-.pet-label {
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(29, 92, 87, 0.12);
-  color: #244642;
-  font-size: 12px;
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  transform: translateX(-50%);
 }
 
 .pet-panel-enter-active,
@@ -380,21 +500,12 @@ const submit = async () => {
   transform: translateY(12px) scale(0.96);
 }
 
-@keyframes floaty {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes blink {
-  0%, 44%, 100% {
+@keyframes robot-blink {
+  0%, 43%, 49%, 100% {
     transform: scaleY(1);
   }
-  46%, 48% {
-    transform: scaleY(0.18);
+  45%, 47% {
+    transform: scaleY(0.12);
   }
 }
 
@@ -404,8 +515,15 @@ const submit = async () => {
     bottom: 14px;
   }
 
-  .pet-label {
-    display: none;
+  .assistant-bubble {
+    width: 286px;
+    min-height: 86px;
+    padding-left: 98px;
+  }
+
+  .robot-button {
+    width: 98px;
+    height: 98px;
   }
 }
 </style>

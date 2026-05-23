@@ -9,6 +9,13 @@ const authHeaders = () => {
 export const generateContract = (orderId) =>
   request.post('/contract/generate', null, { params: { orderId } })
 
+export const generateContractPdf = (orderId) =>
+  axios.post('/api/contract/generate/download', null, {
+    params: { orderId },
+    responseType: 'blob',
+    headers: authHeaders()
+  })
+
 export const listContracts = (params) => request.get('/contract/list', { params })
 
 export const verifyContractById = (id) => request.get(`/contract/verify/${id}`)

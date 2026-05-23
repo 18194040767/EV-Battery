@@ -11,6 +11,7 @@ request.interceptors.request.use((config) => {
 request.interceptors.response.use((res) => res.data, (error) => {
   if (error?.response?.status === 401) {
     const userStore = useUserStore()
+    if (userStore.isGuest) return Promise.reject(error)
     userStore.clearAuth()
     router.push('/login')
   }

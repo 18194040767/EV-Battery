@@ -13,18 +13,18 @@
     </section>
 
     <section class="panel-card filter-panel">
-      <el-input v-model="query.keyword" placeholder="搜索商品名称、档案编码或发货地" clearable class="search" @keyup.enter="loadProducts" />
-      <el-select v-model="query.healthLevel" clearable placeholder="健康等级" class="field">
+      <el-input v-model="query.keyword" placeholder="搜索商品名称、档案编码或发货地" clearable class="search" @input="debouncedLoadProducts" @keyup.enter="loadProducts" />
+      <el-select v-model="query.healthLevel" clearable placeholder="健康等级" class="field" @change="loadProducts">
         <el-option label="优秀" value="优秀" />
         <el-option label="良好" value="良好" />
         <el-option label="一般" value="一般" />
         <el-option label="较差" value="较差" />
       </el-select>
-      <el-select v-model="query.batteryType" clearable placeholder="电池类型" class="field">
+      <el-select v-model="query.batteryType" clearable placeholder="电池类型" class="field" @change="loadProducts">
         <el-option label="磷酸铁锂" value="磷酸铁锂" />
         <el-option label="三元锂" value="三元锂" />
       </el-select>
-      <el-select v-model="query.sortBy" class="field">
+      <el-select v-model="query.sortBy" class="field" @change="loadProducts">
         <el-option label="综合排序" value="" />
         <el-option label="最新发布" value="latest" />
         <el-option label="价格从低到高" value="priceAsc" />
@@ -53,9 +53,9 @@
           <p class="meta">{{ item.health_level || '待评估' }} · {{ item.shipping_from || '全国可发' }} · 库存 {{ item.stock || 0 }}</p>
           <p class="meta">卖家 {{ item.sellerNickname || '平台卖家' }} · 信用 {{ item.creditScore || 100 }}</p>
           <div class="actions">
-            <el-button text @click="toggleFavorite(item)">{{ item.favorite ? '取消收藏' : '加入收藏' }}</el-button>
-            <el-button v-if="!isOwnProduct(item)" text :disabled="Number(item.stock || 0) < 1" @click="addCart(item)">加入购物车</el-button>
-            <el-button v-if="!isOwnProduct(item)" type="primary" :disabled="Number(item.stock || 0) < 1" @click="buyNow(item)">立即下单</el-button>
+            <el-button text :loading="isProductBusy(item, 'favorite')" @click="toggleFavorite(item)">{{ item.favorite ? '取消收藏' : '加入收藏' }}</el-button>
+            <el-button v-if="!isOwnProduct(item)" text :loading="isProductBusy(item, 'cart')" :disabled="Number(item.stock || 0) < 1" @click="addCart(item)">加入购物车</el-button>
+            <el-button v-if="!isOwnProduct(item)" type="primary" :loading="isProductBusy(item, 'buy')" :disabled="Number(item.stock || 0) < 1" @click="buyNow(item)">立即下单</el-button>
             <el-button v-else type="primary" plain @click="$router.push('/trade/user')">管理我的商品</el-button>
           </div>
         </div>
@@ -123,7 +123,7 @@
       </el-form>
       <template #footer>
         <el-button @click="publishVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitPublish">确认发布</el-button>
+        <el-button type="primary" :loading="publishing" @click="submitPublish">确认发布</el-button>
       </template>
     </el-dialog>
   </div>
@@ -149,12 +149,14 @@ import {
   saveAddress
 } from '../../api/trade'
 import { fileToDataUrl } from '../../utils/file'
+import { debounce } from '../../utils/concurrency'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const placeholder = 'https://dummyimage.com/600x420/dce7e5/1e3a38&text=EV'
 const loading = ref(false)
+const publishing = ref(false)
 const publishVisible = ref(false)
 const products = ref([])
 const batteryOptions = ref([])
@@ -162,6 +164,7 @@ const page = ref(1)
 const size = ref(8)
 const total = ref(0)
 const cartCount = ref(0)
+const busyProducts = reactive({})
 
 const query = reactive({
   keyword: '',
@@ -183,6 +186,13 @@ const publishForm = reactive({
 
 const isOwnProduct = (item) => Number(item.seller_id || item.sellerId) === Number(userStore.userId)
 
+const requireLogin = () => {
+  if (!userStore.isGuest) return true
+  ElMessage.warning('游客模式下请先登录后使用该功能')
+  router.push('/login')
+  return false
+}
+
 const ensureDefaultAddress = async () => {
   let addresses = (await getAddresses()).data || []
   if (addresses.length) return addresses[0]
@@ -200,11 +210,13 @@ const ensureDefaultAddress = async () => {
 }
 
 const loadProducts = async () => {
+  page.value = Math.max(page.value, 1)
   loading.value = true
   try {
     const res = await getTradeProducts({ page: page.value, size: size.value, ...query })
     products.value = res?.data?.records || []
     total.value = res?.data?.total || 0
+    if (userStore.isGuest) return
     const favorites = await Promise.all(products.value.map((item) => getFavoriteStatus(item.id)))
     products.value = products.value.map((item, index) => ({
       ...item,
@@ -216,11 +228,21 @@ const loadProducts = async () => {
 }
 
 const loadCartCount = async () => {
+  if (userStore.isGuest) {
+    cartCount.value = 0
+    return
+  }
   const res = await getCartList().catch(() => ({ data: [] }))
   cartCount.value = (res?.data || []).length
 }
 
+const debouncedLoadProducts = debounce(() => {
+  page.value = 1
+  loadProducts()
+}, 350)
+
 const openPublish = async () => {
+  if (!requireLogin()) return
   const res = await getBatteryList({ page: 1, size: 200, statuses: ['ASSESSED'] })
   batteryOptions.value = res?.data?.records || []
   publishVisible.value = true
@@ -232,6 +254,7 @@ const onImageChange = async (uploadFile) => {
 }
 
 const submitPublish = async () => {
+  if (publishing.value) return
   if (!publishForm.batteryId) {
     ElMessage.warning('请先选择已评估的电池档案')
     return
@@ -240,23 +263,43 @@ const submitPublish = async () => {
     ElMessage.warning('请上传商品图片')
     return
   }
-  await createTradeProduct({
-    ...publishForm,
-    imageUrls: [publishForm.coverImage],
-    publishStatus: 'ON_SHELF'
-  })
-  ElMessage.success('商品发布成功')
-  publishVisible.value = false
-  await loadProducts()
+  publishing.value = true
+  try {
+    await createTradeProduct({
+      ...publishForm,
+      imageUrls: [publishForm.coverImage],
+      publishStatus: 'ON_SHELF'
+    })
+    ElMessage.success('商品发布成功')
+    publishVisible.value = false
+    await loadProducts()
+  } finally {
+    publishing.value = false
+  }
 }
 
-const addCart = async (item) => {
+const isProductBusy = (item, action) => !!busyProducts[`${action}-${item.id}`]
+
+const withProductGuard = async (item, action, task) => {
+  const key = `${action}-${item.id}`
+  if (busyProducts[key]) return
+  busyProducts[key] = true
+  try {
+    await task()
+  } finally {
+    busyProducts[key] = false
+  }
+}
+
+const addCart = async (item) => withProductGuard(item, 'cart', async () => {
+  if (!requireLogin()) return
   await addCartItem({ productId: item.id, quantity: 1 })
   ElMessage.success('商品已加入购物车')
   await loadCartCount()
-}
+})
 
-const buyNow = async (item) => {
+const buyNow = async (item) => withProductGuard(item, 'buy', async () => {
+  if (!requireLogin()) return
   const address = await ensureDefaultAddress()
   await createTradeOrder({
     addressId: address?.id,
@@ -265,16 +308,17 @@ const buyNow = async (item) => {
   ElMessage.success('订单已创建，已进入待付款')
   await loadCartCount()
   router.push({ path: '/trade/order-list', query: { tab: 'PENDING_PAYMENT' } })
-}
+})
 
-const toggleFavorite = async (item) => {
+const toggleFavorite = async (item) => withProductGuard(item, 'favorite', async () => {
+  if (!requireLogin()) return
   if (item.favorite) {
     await removeFavoriteProduct(item.id)
   } else {
     await addFavoriteProduct(item.id)
   }
   item.favorite = !item.favorite
-}
+})
 
 const changePage = (value) => {
   page.value = value
@@ -363,7 +407,7 @@ onMounted(async () => {
 }
 
 .owner-badge {
-  background: rgba(29, 92, 87, 0.92);
+  background: rgba(31, 117, 255, 0.92);
 }
 
 .sold-badge {
@@ -411,14 +455,18 @@ onMounted(async () => {
   height: 62px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1d5c57, #0f766e);
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 20px 44px rgba(15, 118, 110, 0.28);
+  box-shadow: 0 20px 44px var(--blue-shadow);
   cursor: pointer;
   z-index: 30;
+  --primary-blue: #2E80FF;
+  --primary-blue-light: #5DA2FF;
+  --primary-blue-dark: #1F6FFF;
+  --blue-shadow: rgba(46,128,255,0.25);
 }
 
 .cart-fab .el-icon {

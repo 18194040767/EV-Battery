@@ -6,8 +6,8 @@
         <h2>待结算</h2>
       </div>
       <div class="actions">
-        <el-button @click="clearInvalid">一键清理失效商品</el-button>
-        <el-button type="primary" @click="checkout">生成待付款订单</el-button>
+        <el-button :loading="clearingInvalid" @click="clearInvalid">一键清理失效商品</el-button>
+        <el-button type="primary" :loading="checkingOut" @click="checkout">生成待付款订单</el-button>
       </div>
     </section>
 
@@ -51,6 +51,8 @@ import {
 const router = useRouter()
 const placeholder = 'https://dummyimage.com/600x420/dce7e5/1e3a38&text=Cart'
 const items = ref([])
+const clearingInvalid = ref(false)
+const checkingOut = ref(false)
 
 const normalizeCartItem = (item = {}) => ({
   ...item,
@@ -94,28 +96,40 @@ const removeItem = async (id) => {
 }
 
 const clearInvalid = async () => {
-  await clearInvalidCartItems()
-  ElMessage.success('失效商品已清理')
-  load()
+  if (clearingInvalid.value) return
+  clearingInvalid.value = true
+  try {
+    await clearInvalidCartItems()
+    ElMessage.success('失效商品已清理')
+    load()
+  } finally {
+    clearingInvalid.value = false
+  }
 }
 
 const checkout = async () => {
+  if (checkingOut.value) return
   if (!checkedItems.value.length) {
     ElMessage.warning('请先勾选可结算商品')
     return
   }
 
-  const address = await ensureDefaultAddress()
-  await createTradeOrder({
-    addressId: address?.id,
-    items: checkedItems.value.map((item) => ({
-      productId: item.productId || item.product_id || item.id,
-      quantity: item.quantity
-    }))
-  })
-  ElMessage.success('订单已创建，正在跳转到待付款列表')
-  await load()
-  router.push({ path: '/trade/order-list', query: { tab: 'PENDING_PAYMENT' } })
+  checkingOut.value = true
+  try {
+    const address = await ensureDefaultAddress()
+    await createTradeOrder({
+      addressId: address?.id,
+      items: checkedItems.value.map((item) => ({
+        productId: item.productId || item.product_id || item.id,
+        quantity: item.quantity
+      }))
+    })
+    ElMessage.success('订单已创建，正在跳转到待付款列表')
+    await load()
+    router.push({ path: '/trade/order-list', query: { tab: 'PENDING_PAYMENT' } })
+  } finally {
+    checkingOut.value = false
+  }
 }
 
 onMounted(load)

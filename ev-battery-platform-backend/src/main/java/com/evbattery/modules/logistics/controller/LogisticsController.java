@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
@@ -52,9 +54,25 @@ public class LogisticsController {
         Long currentUserId = AuthUserContext.getCurrentUserId();
         byte[] bytes = logisticsService.loadHazardousNoticePdf(orderId, currentUserId, adminService.isAdmin(currentUserId));
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hazardous-notice-" + orderId + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition("hazardous-notice-" + orderId + ".pdf", "危险品运输告知单-" + orderId + ".pdf"))
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(bytes.length)
                 .body(bytes);
+    }
+
+    private String contentDisposition(String fallbackFilename, String filename) {
+        return "attachment; filename=\"" + sanitizeAsciiFilename(fallbackFilename) + "\"; filename*=UTF-8''" + encodeFilename(filename);
+    }
+
+    private String sanitizeAsciiFilename(String filename) {
+        return String.valueOf(filename == null ? "document.pdf" : filename).replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private String encodeFilename(String filename) {
+        try {
+            return URLEncoder.encode(String.valueOf(filename == null ? "document.pdf" : filename), StandardCharsets.UTF_8.name()).replace("+", "%20");
+        } catch (Exception ex) {
+            return "document.pdf";
+        }
     }
 }

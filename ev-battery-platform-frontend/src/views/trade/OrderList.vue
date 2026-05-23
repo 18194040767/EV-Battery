@@ -109,6 +109,9 @@
         <el-button v-if="item.orderStatus === 'COMPLETED'" @click.stop="openContractCenter(item)">
           查看合同
         </el-button>
+        <el-button v-if="canFillTracking(item)" type="primary" plain @click.stop="openTrackingDrawer(item)">
+          填写运单号
+        </el-button>
         <el-dropdown
           v-if="showMockMenu(item)"
           trigger="click"
@@ -162,7 +165,7 @@
       </div>
       <template #footer>
         <el-button @click="payDialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedAddressId" @click="submitPayment">确认支付</el-button>
+        <el-button type="primary" :loading="paymentSubmitting" :disabled="!selectedAddressId" @click="submitPayment">确认支付</el-button>
       </template>
     </el-dialog>
 
@@ -262,6 +265,12 @@
         <el-button type="primary" @click="submitReview">发布评价</el-button>
       </template>
     </el-dialog>
+
+    <LogisticsDrawer
+      v-model="trackingDrawerVisible"
+      :order-id="currentTrackingOrder?.id || null"
+      @success="handleTrackingSuccess"
+    />
   </div>
 </template>
 
@@ -270,6 +279,7 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CircleCheck, Location, Plus, RemoveFilled, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import LogisticsDrawer from '../logistics/LogisticsDrawer.vue'
 import { mockShipTradeOrder, queryLogisticsStatus } from '../../api/logistics'
 import {
   confirmTradeOrder,
@@ -281,11 +291,13 @@ import {
   updateTradeOrderAddress
 } from '../../api/trade'
 import { generateContract } from '../../api/contract'
+import { useUserStore } from '../../store/user'
 import { advanceMockLogistics, mergeMockLogisticsState, resetMockLogistics } from '../../utils/mockLogistics'
 import { loadAmap } from '../../utils/amap'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 const placeholder = 'https://dummyimage.com/600x420/dce7e5/1e3a38&text=EV'
 const validTabs = ['ALL', 'PENDING_PAYMENT', 'PAID_PENDING_SHIP', 'SHIPPED_PENDING_RECEIVE', 'COMPLETED_PENDING_REVIEW']
 
@@ -297,8 +309,11 @@ const addresses = ref([])
 const currentPayOrder = ref(null)
 const payDialogVisible = ref(false)
 const payingVisible = ref(false)
+const paymentSubmitting = ref(false)
 const selectedAddressId = ref(null)
 const reviewVisible = ref(false)
+const trackingDrawerVisible = ref(false)
+const currentTrackingOrder = ref(null)
 const addressDialogVisible = ref(false)
 const savingAddress = ref(false)
 const locatingAddress = ref(false)
@@ -358,6 +373,8 @@ const reviewLabel = (score) => {
 
 const hasLogistics = (item) => Boolean(item.logisticsCompany || item.logisticsNo || logisticsMap.value[item.id]?.trackingNo)
 const showMockMenu = (item) => ['PAID_PENDING_SHIP', 'SHIPPED_PENDING_RECEIVE'].includes(item.orderStatus)
+const canFillTracking = (item) =>
+  item.orderStatus === 'PAID_PENDING_SHIP' && Number(item.sellerId || item.seller_id || 0) === Number(userStore.userId)
 const showTimeline = (item) => item.orderStatus !== 'PENDING_PAYMENT' && logisticsMap.value[item.id]?.nodes?.length && expandedLogistics[item.id]
 
 const normalizeOrder = (item = {}) => ({
@@ -366,7 +383,8 @@ const normalizeOrder = (item = {}) => ({
   logisticsCompany: item.logisticsCompany || item.logistics_company || '',
   logisticsNo: item.logisticsNo || item.logistics_no || '',
   unitPrice: item.unitPrice ?? item.unit_price,
-  productId: item.productId ?? item.product_id
+  productId: item.productId ?? item.product_id,
+  sellerId: item.sellerId ?? item.seller_id
 })
 
 const normalizeAddress = (item = {}) => ({
@@ -570,21 +588,28 @@ const toggleLogistics = (orderId) => {
 }
 
 const submitPayment = async () => {
+  if (paymentSubmitting.value) return
   if (!currentPayOrder.value || !selectedAddressId.value) {
     ElMessage.warning('请先选择收货地址')
     return
   }
 
-  await updateTradeOrderAddress(currentPayOrder.value.id, { addressId: selectedAddressId.value })
-  payDialogVisible.value = false
-  payingVisible.value = true
-  await new Promise((resolve) => window.setTimeout(resolve, 2000))
-  await payTradeOrder(currentPayOrder.value.id)
-  payingVisible.value = false
-  ElMessage.success('支付成功，订单已移入待发货')
-  await router.replace({ query: { ...route.query, tab: 'PAID_PENDING_SHIP' } })
-  activeTab.value = 'PAID_PENDING_SHIP'
-  await loadOrders()
+  paymentSubmitting.value = true
+  try {
+    await updateTradeOrderAddress(currentPayOrder.value.id, { addressId: selectedAddressId.value })
+    payDialogVisible.value = false
+    payingVisible.value = true
+    await new Promise((resolve) => window.setTimeout(resolve, 2000))
+    await payTradeOrder(currentPayOrder.value.id)
+    payingVisible.value = false
+    ElMessage.success('支付成功，订单已移入待发货')
+    await router.replace({ query: { ...route.query, tab: 'PAID_PENDING_SHIP' } })
+    activeTab.value = 'PAID_PENDING_SHIP'
+    await loadOrders()
+  } finally {
+    payingVisible.value = false
+    paymentSubmitting.value = false
+  }
 }
 
 const handleMockCommand = async (command, item) => {
@@ -626,6 +651,22 @@ const openLogisticsDetail = (item) => {
       orderId: String(item.id)
     }
   })
+}
+
+const openTrackingDrawer = (item) => {
+  currentTrackingOrder.value = item
+  trackingDrawerVisible.value = true
+}
+
+const handleTrackingSuccess = async () => {
+  trackingDrawerVisible.value = false
+  await router.replace({ query: { ...route.query, tab: 'SHIPPED_PENDING_RECEIVE' } })
+  activeTab.value = 'SHIPPED_PENDING_RECEIVE'
+  await loadOrders()
+  if (currentTrackingOrder.value?.id) {
+    await refreshLogistics(currentTrackingOrder.value.id, false).catch(() => null)
+  }
+  currentTrackingOrder.value = null
 }
 
 const openContractCenter = async (item) => {
@@ -770,7 +811,7 @@ onMounted(loadOrders)
 
 .timeline-box,
 .review-box {
-  background: #f7fbfa;
+  background: #ffffff;
 }
 
 .review-head {
@@ -865,7 +906,7 @@ onMounted(loadOrders)
 
 .rating-card.active {
   border-color: var(--app-primary);
-  background: rgba(29, 92, 87, 0.06);
+  background: #f3f7ff;
 }
 
 .rating-icon {
@@ -883,7 +924,7 @@ onMounted(loadOrders)
   height: 52px;
   margin: 0 auto 18px;
   border-radius: 50%;
-  border: 4px solid rgba(29, 92, 87, 0.14);
+  border: 4px solid rgba(42, 56, 177, 0.14);
   border-top-color: var(--app-primary);
   animation: spin 0.9s linear infinite;
 }
