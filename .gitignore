@@ -8,6 +8,8 @@ replay_pid*.log
 .idea/
 .vite/
 outputs/
+apache-maven-*/
+.github/skills/
 
 ev-battery-platform-backend/target/
 ev-battery-platform-backend/storage/

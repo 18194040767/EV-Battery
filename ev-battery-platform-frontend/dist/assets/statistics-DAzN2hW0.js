@@ -1,1 +1,0 @@
-import{r as t}from"./request-GWpR5tGK.js";const e=s=>t.get("/statistics/trade-trend",{params:s}),r=()=>t.get("/statistics/health-distribution"),o=()=>t.get("/statistics/source-distribution"),a=()=>t.get("/statistics/product-category-distribution");export{r as a,a as b,o as c,e as g};
